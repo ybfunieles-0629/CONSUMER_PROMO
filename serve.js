@@ -1,7 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch'); // Importa la biblioteca 'node-fetch'
 const app = express();
-const port = 8080;
+const port = 5894;
 
 app.get('/', (req, res) => {
     res.json({
