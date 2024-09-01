@@ -244,42 +244,62 @@ app.get('/productosfinales', async (req, res) => {
             throw new Error('El resultado de las categorías no es una matriz');
         }
 
-        // Obtener una lista de promesas para las solicitudes de productos
-        const productPromises = categoriasData.resultado.map(async (categoria) => {
+        // Inicializar una lista para almacenar las primeras dos categorías y sus stocks
+        const selectedCategorias = [];
+        const maxCategorias = 2; // Cambia esto al número deseado de categorías
+
+        // Recorrer las categorías y consumir la segunda API para obtener productos
+        for (const categoria of categoriasData.resultado) {
+            if (selectedCategorias.length >= maxCategorias) {
+                break; // Sal del bucle después de obtener el número deseado de categorías
+            }
+
             const idCategoria = categoria.id;
             const productosResponse = await fetch(`http://api.cataprom.com/rest/categorias/${idCategoria}/productos`);
 
-            if (!productosResponse.ok) {
-                throw new Error(`Error al obtener productos de categoría ${idCategoria}`);
-            }
+            if (productosResponse.ok) {
+                const productosData = await productosResponse.json();
 
-            const productosData = await productosResponse.json();
+                // Verificar si productosData.resultado es un objeto
+                if (typeof productosData.resultado === 'object') {
+                    const productos = productosData.resultado;
 
-            // Obtener el ID de cada producto y construir la URL para la tercera API
-            const productos = productosData.resultado || [];
-            const productoPromises = productos.map(async (producto) => {
-                const idProducto = producto.id;
-                const productoResponse = await fetch(`http://api.cataprom.com/rest/productos/${idProducto}`);
+                    // Arreglo para almacenar los productos con su stock
+                    const productosConStock = [];
 
-                if (!productoResponse.ok) {
-                    throw new Error(`Error al obtener detalles del producto ${idProducto}`);
+                    // Iterar sobre cada producto para obtener su stock
+                    for (const producto of productos) {
+                        const referencia = producto.referencia;
+
+                        // Llamar a la API de stock usando la referencia del producto
+                        const stockResponse = await fetch(`http://api.cataprom.com/rest/stock/${referencia}`);
+
+                        if (stockResponse.ok) {
+                            const stockData = await stockResponse.json();
+                            
+                            // Agregar el producto y su stock al arreglo
+                            productosConStock.push({
+                                ...producto,
+                                stock: stockData // Agregar la información de stock al producto
+                            });
+                        } else {
+                            console.error(`Error al obtener el stock para la referencia ${referencia}`);
+                        }
+                    }
+
+                    // Añadir los productos con su stock a la lista de categorías seleccionadas
+                    selectedCategorias.push({
+                        categoria: categoria,
+                        productos: productosConStock,
+                    });
                 }
+            } else {
+                // Manejar errores específicos de la solicitud de productos
+                console.error(`Error al obtener productos de categoría ${idCategoria}`);
+            }
+        }
 
-                const productoData = await productoResponse.json();
-                return productoData.resultado;
-            });
-
-            const productosDetalles = await Promise.all(productoPromises);
-            return {
-                categoria: categoria,
-                productos: productosDetalles,
-            };
-        });
-
-        // Esperar a que todas las solicitudes se completen en paralelo
-        const selectedCategorias = await Promise.all(productPromises);
-
-        // Enviar la lista de productos por categoría como respuesta
+        // Enviar la lista de las primeras dos categorías y sus productos con stock como respuesta
         res.json({
             categorias: selectedCategorias,
         });
