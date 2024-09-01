@@ -183,13 +183,13 @@ app.get('/misproductos', async (req, res) => {
             throw new Error('El resultado de las categorías no es una matriz');
         }
 
-        // Inicializar una lista para almacenar las primeras dos categorías
-        const selectedCategorias = [];
+        // Inicializar una lista para almacenar los productos de las primeras dos categorías
+        const selectedProductos = [];
         const maxCategorias = 2; // Cambia esto al número deseado de categorías
 
         // Recorrer las categorías y consumir la segunda API para obtener productos
         for (const categoria of categoriasData.resultado) {
-            if (selectedCategorias.length >= maxCategorias) {
+            if (selectedProductos.length >= maxCategorias) {
                 break; // Sal del bucle después de obtener el número deseado de categorías
             }
 
@@ -199,9 +199,9 @@ app.get('/misproductos', async (req, res) => {
             if (productosResponse.ok) {
                 const productosData = await productosResponse.json();
 
-                // Verificar si productosData.resultado es un objeto
-                if (typeof productosData.resultado === 'object') {
-                    selectedCategorias.push(productosData.resultado);
+                // Verificar si productosData.resultado es un array
+                if (Array.isArray(productosData.resultado)) {
+                    selectedProductos.push(...productosData.resultado); // Añadir productos directamente a la lista
                 }
             } else {
                 // Manejar errores específicos de la solicitud de productos
@@ -209,10 +209,8 @@ app.get('/misproductos', async (req, res) => {
             }
         }
 
-        // Enviar la lista de las primeras dos categorías como respuesta
-        res.json(
-            selectedCategorias,
-        );
+        // Enviar la lista de productos como respuesta
+        res.json(selectedProductos);
     } catch (error) {
         console.error(error);
         res.status(500).json({
@@ -220,6 +218,7 @@ app.get('/misproductos', async (req, res) => {
         });
     }
 });
+
 
 
 
