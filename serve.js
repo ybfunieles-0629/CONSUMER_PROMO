@@ -210,9 +210,9 @@ app.get('/misproductos', async (req, res) => {
         }
 
         // Enviar la lista de las primeras dos categorías como respuesta
-        res.json({
-            categorias: selectedCategorias,
-        });
+        res.json(
+            selectedCategorias,
+        );
     } catch (error) {
         console.error(error);
         res.status(500).json({
