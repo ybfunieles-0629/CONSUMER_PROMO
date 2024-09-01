@@ -184,7 +184,7 @@ app.get('/misproductos', async (req, res) => {
         }
 
         // Inicializar una lista para almacenar las primeras dos categorías
-        const selectedCategorias = [];
+        let selectedCategorias;
         const maxCategorias = 2; // Cambia esto al número deseado de categorías
 
         // Recorrer las categorías y consumir la segunda API para obtener productos
