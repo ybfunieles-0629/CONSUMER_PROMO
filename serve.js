@@ -351,6 +351,9 @@ app.get('/stock/:id', async (req, res) => {
 
 
 // PETICION DE GENERAR PRODUCTOS DE PROMOS SEGUN CATEGORIAS
+
+
+// PETICION DE GENERAR PRODUCTOS DE PROMOS SEGUN CATEGORIAS
 app.get('/referenciasCategorias', async (req, res) => {
     try {
         // Consumir la primera API para obtener el listado de categorías
@@ -367,8 +370,8 @@ app.get('/referenciasCategorias', async (req, res) => {
             throw new Error('El resultado de las categorías no es una matriz');
         }
 
-        // Inicializar una lista para almacenar los productos de todas las categorías
-        const allProductos = [];
+        // Objeto para almacenar productos únicos con sus categorías asociadas
+        const productosMap = {};
 
         // Promesa que ejecuta las solicitudes de productos en paralelo
         const productPromises = categoriasData.resultado.map(async (categoria) => {
@@ -378,9 +381,20 @@ app.get('/referenciasCategorias', async (req, res) => {
             if (productosResponse.ok) {
                 const productosData = await productosResponse.json();
 
-                // Verificar si productosData.resultado es un array y agregar a la lista
+                // Verificar si productosData.resultado es un array
                 if (Array.isArray(productosData.resultado)) {
-                    allProductos.push(...productosData.resultado);
+                    productosData.resultado.forEach((producto) => {
+                        if (productosMap[producto.id]) {
+                            // Si el producto ya existe, agregar la categoría a la lista
+                            productosMap[producto.id].categorias.push(categoria.nombre);
+                        } else {
+                            // Si el producto no existe, crearlo con su lista de categorías
+                            productosMap[producto.id] = {
+                                ...producto,
+                                categorias: [categoria.nombre],
+                            };
+                        }
+                    });
                 } else {
                     console.error(`El resultado de los productos para la categoría ${idCategoria} no es un array`);
                 }
@@ -393,8 +407,11 @@ app.get('/referenciasCategorias', async (req, res) => {
         // Esperar a que todas las promesas de productos se resuelvan
         await Promise.all(productPromises);
 
-        // Enviar la lista de productos como respuesta
-        res.json(allProductos);
+        // Convertir el mapa de productos en un arreglo de resultados
+        const finalProductos = Object.values(productosMap);
+
+        // Enviar la lista de productos únicos con sus categorías asociadas como respuesta
+        res.json(finalProductos);
     } catch (error) {
         console.error(error);
         res.status(500).json({
@@ -402,6 +419,7 @@ app.get('/referenciasCategorias', async (req, res) => {
         });
     }
 });
+
 
 
 
