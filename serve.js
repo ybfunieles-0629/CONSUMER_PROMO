@@ -350,6 +350,59 @@ app.get('/stock/:id', async (req, res) => {
 });
 
 
+// PETICION DE GENERAR PRODUCTOS DE PROMOS SEGUN CATEGORIAS
+app.get('/referenciasCategorias', async (req, res) => {
+    try {
+        // Consumir la primera API para obtener el listado de categorías
+        const categoriasResponse = await fetch('http://api.cataprom.com/rest/categorias');
+
+        if (!categoriasResponse.ok) {
+            throw new Error('Error al obtener categorías');
+        }
+
+        const categoriasData = await categoriasResponse.json();
+
+        // Verificar si categoriasData.resultado es un iterable (array)
+        if (!Array.isArray(categoriasData.resultado)) {
+            throw new Error('El resultado de las categorías no es una matriz');
+        }
+
+        // Inicializar una lista para almacenar los productos de todas las categorías
+        const allProductos = [];
+
+        // Promesa que ejecuta las solicitudes de productos en paralelo
+        const productPromises = categoriasData.resultado.map(async (categoria) => {
+            const idCategoria = categoria.id;
+            const productosResponse = await fetch(`http://api.cataprom.com/rest/categorias/${idCategoria}/productos`);
+
+            if (productosResponse.ok) {
+                const productosData = await productosResponse.json();
+
+                // Verificar si productosData.resultado es un array y agregar a la lista
+                if (Array.isArray(productosData.resultado)) {
+                    allProductos.push(...productosData.resultado);
+                } else {
+                    console.error(`El resultado de los productos para la categoría ${idCategoria} no es un array`);
+                }
+            } else {
+                // Manejar errores específicos de la solicitud de productos
+                console.error(`Error al obtener productos de la categoría ${idCategoria}`);
+            }
+        });
+
+        // Esperar a que todas las promesas de productos se resuelvan
+        await Promise.all(productPromises);
+
+        // Enviar la lista de productos como respuesta
+        res.json(allProductos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+        });
+    }
+});
+
 
 
 
