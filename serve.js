@@ -226,7 +226,7 @@ app.get('/misproductos', async (req, res) => {
 
 
 
-// SEGUNDA PETICION DE PRUEBA DE PRODUCTOS
+// LISTADO DEE REFEERENCIAS QUE SE REEPITEN POR CATEGORIAS 
 app.get('/productosfinales', async (req, res) => {
     try {
         // Consumir la primera API para obtener el listado de categorías
@@ -240,65 +240,39 @@ app.get('/productosfinales', async (req, res) => {
 
         // Verificar si categoriasData.resultado es un iterable (array)
         if (!Array.isArray(categoriasData.resultado)) {
-            throw new Error('El resultado de las categorías no es una matriz');
+            throw new Error('El resultado de las categorías no es un array');
         }
 
-        // Inicializar una lista para almacenar las primeras dos categorías y sus stocks
+        // Inicializar una lista para almacenar las categorías y sus productos
         const selectedCategorias = [];
-        const maxCategorias = 2; // Cambia esto al número deseado de categorías
 
-        // Recorrer las categorías y consumir la segunda API para obtener productos
+        // Recorrer todas las categorías y consumir la segunda API para obtener productos
         for (const categoria of categoriasData.resultado) {
-            if (selectedCategorias.length >= maxCategorias) {
-                break; // Sal del bucle después de obtener el número deseado de categorías
-            }
-
             const idCategoria = categoria.id;
             const productosResponse = await fetch(`http://api.cataprom.com/rest/categorias/${idCategoria}/productos`);
 
             if (productosResponse.ok) {
                 const productosData = await productosResponse.json();
 
-                // Verificar si productosData.resultado es un objeto
-                if (typeof productosData.resultado === 'object') {
+                // Verificar si productosData.resultado es un array
+                if (Array.isArray(productosData.resultado)) {
                     const productos = productosData.resultado;
 
-                    // Arreglo para almacenar los productos con su stock
-                    const productosConStock = [];
-
-                    // Iterar sobre cada producto para obtener su stock
-                    for (const producto of productos) {
-                        const referencia = producto.referencia;
-
-                        // Llamar a la API de stock usando la referencia del producto
-                        const stockResponse = await fetch(`http://api.cataprom.com/rest/stock/${referencia}`);
-
-                        if (stockResponse.ok) {
-                            const stockData = await stockResponse.json();
-                            
-                            // Agregar el producto y su stock al arreglo
-                            productosConStock.push({
-                                ...producto,
-                                stock: stockData // Agregar la información de stock al producto
-                            });
-                        } else {
-                            console.error(`Error al obtener el stock para la referencia ${referencia}`);
-                        }
-                    }
-
-                    // Añadir los productos con su stock a la lista de categorías seleccionadas
+                    // Añadir los productos a la lista de categorías seleccionadas
                     selectedCategorias.push({
                         categoria: categoria,
-                        productos: productosConStock,
+                        productos: productos,
                     });
+                } else {
+                    console.error(`El resultado de los productos para la categoría ${idCategoria} no es un array`);
                 }
             } else {
                 // Manejar errores específicos de la solicitud de productos
-                console.error(`Error al obtener productos de categoría ${idCategoria}`);
+                console.error(`Error al obtener productos de la categoría ${idCategoria}`);
             }
         }
 
-        // Enviar la lista de las primeras dos categorías y sus productos con stock como respuesta
+        // Enviar la lista de categorías y sus productos como respuesta
         res.json({
             categorias: selectedCategorias,
         });
@@ -350,7 +324,6 @@ app.get('/stock/:id', async (req, res) => {
 });
 
 
-// PETICION DE GENERAR PRODUCTOS DE PROMOS SEGUN CATEGORIAS
 
 
 // PETICION DE GENERAR PRODUCTOS DE PROMOS SEGUN CATEGORIAS
