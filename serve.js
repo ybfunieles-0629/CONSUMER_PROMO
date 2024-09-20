@@ -49,6 +49,45 @@ app.get('/categorias', async (req, res) => {
 });
 
 
+app.get('/categoriasTotales', async (req, res) => {
+    const apiUrl = 'http://api.cataprom.com/rest/categorias';
+
+    try {
+        const response = await fetch(apiUrl);
+        if (response.status >= 200 && response.status < 300) {
+            const data = await response.json();
+            
+            // Filtrar las categorías con idParent !== null
+            const categoriasConParent = data.resultado.filter(cat => cat.idParent !== null);
+            
+            // Mapeamos cada categoría filtrada para obtener detalles de su idParent
+            const categoriasDetalladas = await Promise.all(
+                categoriasConParent.map(async cat => {
+                    const parentUrl = `http://api.cataprom.com/rest/categorias/${cat.idParent}`;
+                    const parentResponse = await fetch(parentUrl);
+                    return parentResponse.json();
+                })
+            );
+            res.status(200).json({
+                categoriasConParent,
+                categoriasDetalladas,
+            });
+        } else {
+            res.status(response.status).json({
+                error: 'Error en la solicitud a la API externa',
+                status: response.status,
+            });
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            msg: error.message
+        });
+    }
+});
+
+
 
 
 
