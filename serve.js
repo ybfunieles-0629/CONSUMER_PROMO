@@ -49,6 +49,8 @@ app.get('/categorias', async (req, res) => {
 });
 
 
+
+//Listado de categorias inclueyengo las principales
 app.get('/categoriasTotales', async (req, res) => {
     const apiUrl = 'http://api.cataprom.com/rest/categorias';
 
@@ -56,18 +58,28 @@ app.get('/categoriasTotales', async (req, res) => {
         const response = await fetch(apiUrl);
         if (response.status >= 200 && response.status < 300) {
             const data = await response.json();
-            
+
             // Filtrar las categorías con idParent !== null
             const categoriasConParent = data.resultado.filter(cat => cat.idParent !== null);
-            
-            // Mapeamos cada categoría filtrada para obtener detalles de su idParent
-            const categoriasDetalladas = await Promise.all(
-                categoriasConParent.map(async cat => {
+
+            // Utilizar un Set para almacenar los ids de los padres únicos
+            const categoriasUnicas = new Set();
+            const categoriasDetalladas = [];
+
+            for (const cat of categoriasConParent) {
+                if (!categoriasUnicas.has(cat.idParent)) {
+                    // Agregar el idParent al Set para evitar duplicados
+                    categoriasUnicas.add(cat.idParent);
+
+                    // Obtener los detalles del parent
                     const parentUrl = `http://api.cataprom.com/rest/categorias/${cat.idParent}`;
                     const parentResponse = await fetch(parentUrl);
-                    return parentResponse.json();
-                })
-            );
+                    const parentData = await parentResponse.json();
+
+                    categoriasDetalladas.push(parentData);
+                }
+            }
+
             res.status(200).json({
                 categoriasConParent,
                 categoriasDetalladas,
@@ -88,6 +100,29 @@ app.get('/categoriasTotales', async (req, res) => {
 });
 
 
+// Buscar categorias por ID
+app.get('/categoria/padre/:id', async (req, res) => {
+    const { id } = req.params;
+    const apiUrl = `http://api.cataprom.com/rest/categorias/${id}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (response.status >= 200 && response.status < 300) {
+            const data = await response.json();
+            res.status(200).json(data); // Devuelve los detalles de la categoría
+        } else {
+            res.status(response.status).json({
+                error: `Error al obtener la categoría con ID ${id}`,
+                status: response.status,
+            });
+        }
+    } catch (error) {
+        console.error(`Error al obtener la categoría con ID ${id}:`, error);
+        res.status(500).json({
+            msg: error.message
+        });
+    }
+});
 
 
 
